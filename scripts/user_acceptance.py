@@ -4,8 +4,7 @@ import json
 import os
 from pathlib import Path
 
-from ai_lab.understanding.baseline import BaselineInterpreter, context_from_eval
-from ai_lab.understanding.llm import OpenAIAgentsInterpreter
+from ai_lab.understanding.entrypoint import understand_utterance
 
 
 def _load_context() -> dict[str, object]:
@@ -25,8 +24,8 @@ def main() -> None:
 
     raw_context = _load_context()
     use_llm = bool(os.getenv("OPENAI_API_KEY"))
-    interpreter = OpenAIAgentsInterpreter() if use_llm else BaselineInterpreter()
     print("理解引擎：" + ("LLM structured interpreter" if use_llm else "baseline（未設 OPENAI_API_KEY）"))
+    print("流程：Context -> IntentContract -> Grounding Validator -> Clarification Policy\n")
 
     total = 0
     count = 0
@@ -37,18 +36,22 @@ def main() -> None:
         if not utterance:
             continue
 
-        context = context_from_eval(
+        result = understand_utterance(
             session_id="user-acceptance-01",
             utterance=utterance,
-            raw=raw_context,
+            raw_context=raw_context,
         )
-        contract = interpreter.interpret(context=context)
+        contract = result.contract
 
         print("\nAI Lab 理解")
         print(f"  真正目標：{contract.primary_goal}")
         print(f"  我認為你需要：{contract.inferred_need}")
         print(f"  想得到的結果：{contract.desired_outcome}")
         print(f"  信心：{contract.confidence:.0%}")
+        print(f"  下一步政策：{result.decision.action.value}")
+        print(f"  原因：{result.decision.reason}")
+        if result.decision.question:
+            print(f"  只問一個問題：{result.decision.question}")
         if contract.assumptions:
             print("  推測：")
             for item in contract.assumptions:
