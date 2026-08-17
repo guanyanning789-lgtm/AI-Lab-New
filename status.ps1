@@ -56,7 +56,7 @@ Write-Host "CURRENT TARGET" -ForegroundColor Cyan
 Write-Host "M1 - prove canonical understanding entrypoint with local tests" -ForegroundColor White
 Write-Host ""
 Write-Host "NEXT USER-VISIBLE MILESTONE" -ForegroundColor Cyan
-Write-Host '"繼續" / "這個" / "像上一版" can resolve from context reliably' -ForegroundColor White
+Write-Host 'Short references such as CONTINUE / THIS / PREVIOUS VERSION resolve from context reliably' -ForegroundColor White
 Write-Host "--------------------------------------------------------------" -ForegroundColor DarkGray
 Write-Host ""
 
