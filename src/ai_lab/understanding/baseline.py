@@ -1,0 +1,117 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any
+
+from .models import (
+    AutonomyMode,
+    ContextPack,
+    IntentContract,
+    Reversibility,
+    RiskLevel,
+    SuccessCriterion,
+)
+
+
+def context_from_eval(*, session_id: str, utterance: str, raw: Mapping[str, Any]) -> ContextPack:
+    active_goal = raw.get("active_goal") or {}
+    active_goal_id = active_goal.get("id") if isinstance(active_goal, Mapping) else None
+    project_state = tuple(f"{k}={v}" for k, v in raw.items())
+    return ContextPack(
+        session_id=session_id,
+        utterance=utterance,
+        active_goal_id=active_goal_id,
+        project_state=project_state,
+    )
+
+
+class BaselineInterpreter:
+    """Deterministic M1 baseline for measuring context resolution before LLM integration.
+
+    This is intentionally small and transparent. It is not the target intelligence layer;
+    it gives us a scoreable floor and prevents future model changes from regressing obvious cases.
+    """
+
+    def interpret(self, *, context: ContextPack) -> IntentContract:
+        text = context.utterance.strip()
+        state = "\n".join(context.project_state)
+
+        goal = "unknown_goal"
+        target: tuple[str, ...] = ()
+        missing: tuple[str, ...] = ()
+        confidence = 0.60
+        inferred = "resolve the user's current request from available context"
+        outcome = "produce the requested result"
+        autonomy = AutonomyMode.ADVISE
+
+        if text == "繼續" and context.active_goal_id:
+            goal = "resume_active_goal"
+            target = (context.active_goal_id,)
+            confidence = 0.97
+            inferred = "resume the saved active goal without repeating setup"
+            outcome = f"resume {context.active_goal_id} from its saved state"
+            autonomy = AutonomyMode.EXECUTE
+        elif "上一版" in text and ("current_artifact=" in state or "previous_artifact=" in state):
+            goal = "revise_current_artifact_using_previous_version"
+            confidence = 0.93
+            inferred = "use the previous artifact as the preferred reference and revise the current one"
+            outcome = "revise the current artifact while preserving prior preferences"
+            autonomy = AutonomyMode.EXECUTE
+        elif "專業一點" in text and "quality_rubric_available=True" in state:
+            goal = "improve_active_artifact_quality"
+            confidence = 0.92
+            inferred = "improve quality using the artifact-specific rubric rather than decoration"
+            outcome = "produce a measurably higher-quality active artifact"
+            autonomy = AutonomyMode.EXECUTE
+        elif "今天我最應該做什麼" in text:
+            goal = "select_single_highest_priority_goal"
+            confidence = 0.94
+            inferred = "choose one priority using current commitments, projects and deadlines"
+            outcome = "return one highest-priority goal for today"
+            autonomy = AutonomyMode.ADVISE
+        elif "失敗測試" in text and "active_repository=" in state:
+            goal = "repair_failed_tests"
+            confidence = 0.96
+            inferred = "repair the failing tests in the active repository and verify before reporting success"
+            outcome = "all targeted failed tests pass with verification evidence"
+            autonomy = AutonomyMode.EXECUTE
+        elif "修好這個項目" in text and "active_repository=None" in state:
+            goal = "repair_project"
+            confidence = 0.84
+            inferred = "repair a project, but the repository identity is unresolved"
+            outcome = "repair the intended repository"
+            missing = ("你指的是 repo-a 還是 repo-b？",)
+            autonomy = AutonomyMode.EXECUTE
+        elif "下次繼續" in text and context.active_goal_id:
+            goal = "pause_and_checkpoint"
+            target = (context.active_goal_id,)
+            confidence = 0.98
+            inferred = "pause execution and persist the exact current state for later resumption"
+            outcome = "active goal is safely checkpointed and no further execution occurs"
+            autonomy = AutonomyMode.EXECUTE
+        elif "圖片" in text and "current_image_reference=" in state:
+            goal = "revise_visual_artifact_from_reference"
+            confidence = 0.95
+            inferred = "use the referenced image as visual evidence and change only the requested typography"
+            outcome = "revise the visual artifact to match the reference with smaller text"
+            autonomy = AutonomyMode.EXECUTE
+
+        return IntentContract(
+            literal_request=context.utterance,
+            primary_goal=goal,
+            inferred_need=inferred,
+            desired_outcome=outcome,
+            target_scope=target,
+            success_criteria=(
+                SuccessCriterion(
+                    id="expected-outcome",
+                    description=outcome,
+                    verification_method="scenario_specific_check",
+                ),
+            ),
+            missing_information=missing,
+            risk_level=RiskLevel.LOW,
+            reversibility=Reversibility.REVERSIBLE,
+            autonomy_mode=autonomy,
+            confidence=confidence,
+        )
