@@ -8,7 +8,7 @@ Set-Location $repoRoot
 
 $milestones = @(
     @{ Id = "M0"; Name = "Understanding Foundation"; Weight = 16; Done = 16; State = "DONE" },
-    @{ Id = "M1"; Name = "Personal Understanding"; Weight = 17; Done = 0; State = "CURRENT" },
+    @{ Id = "M1"; Name = "Personal Understanding"; Weight = 17; Done = 2; State = "CURRENT" },
     @{ Id = "M2"; Name = "Persistent Personal Context"; Weight = 17; Done = 0; State = "TODO" },
     @{ Id = "M3"; Name = "One Real Vertical Loop: Coding"; Weight = 17; Done = 0; State = "TODO" },
     @{ Id = "M4"; Name = "Product Shell"; Weight = 16; Done = 0; State = "TODO" },
@@ -45,12 +45,18 @@ foreach ($m in $milestones) {
 
 Write-Host ""
 Write-Host "--------------------------------------------------------------" -ForegroundColor DarkGray
+Write-Host "M1 ACCEPTANCE PATH" -ForegroundColor Cyan
+Write-Host "[DONE] Natural language -> ContextPack" -ForegroundColor Green
+Write-Host "[DONE] ContextPack -> IntentContract -> grounding/policy" -ForegroundColor Green
+Write-Host "[TODO] Local pytest evidence for canonical entrypoint" -ForegroundColor Yellow
+Write-Host "[TODO] Real cloud-model acceptance cases" -ForegroundColor Yellow
+Write-Host "[TODO] Expand personal-language eval set toward 50 cases" -ForegroundColor Yellow
+Write-Host ""
 Write-Host "CURRENT TARGET" -ForegroundColor Cyan
-Write-Host "M1 - Natural language + context -> validated IntentContract" -ForegroundColor White
+Write-Host "M1 - prove canonical understanding entrypoint with local tests" -ForegroundColor White
 Write-Host ""
 Write-Host "NEXT USER-VISIBLE MILESTONE" -ForegroundColor Cyan
-Write-Host '"修復這個 repo 的失敗測試"' -ForegroundColor White
-Write-Host "Understand -> Plan -> Execute -> Verify -> Report" -ForegroundColor White
+Write-Host '"繼續" / "這個" / "像上一版" can resolve from context reliably' -ForegroundColor White
 Write-Host "--------------------------------------------------------------" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -82,6 +88,6 @@ if ($RunTests) {
 }
 
 Write-Host ""
-Write-Host "Progress rule: percentage only increases after milestone acceptance evidence." -ForegroundColor DarkGray
+Write-Host "Progress rule: completed code may move implementation progress; milestone DONE requires acceptance evidence." -ForegroundColor DarkGray
 Write-Host "Roadmap: docs\ROADMAP.md" -ForegroundColor DarkGray
 Write-Host ""
