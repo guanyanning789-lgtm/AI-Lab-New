@@ -6,6 +6,14 @@ $ErrorActionPreference = "SilentlyContinue"
 $repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $repoRoot
 
+$evalPath = Join-Path $repoRoot "evals\understanding_cases.jsonl"
+$evalCount = 0
+if (Test-Path $evalPath) {
+    $evalCount = @(Get-Content $evalPath | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }).Count
+}
+$evalTarget = 50
+$evalPct = if ($evalTarget -gt 0) { [Math]::Min(100, [Math]::Round(($evalCount / $evalTarget) * 100)) } else { 0 }
+
 $milestones = @(
     @{ Id = "M0"; Name = "Understanding Foundation"; Weight = 16; Done = 16; State = "DONE" },
     @{ Id = "M1"; Name = "Personal Understanding"; Weight = 17; Done = 2; State = "CURRENT" },
@@ -44,19 +52,23 @@ foreach ($m in $milestones) {
 }
 
 Write-Host ""
+Write-Host "M1 EVAL COVERAGE" -ForegroundColor Cyan
+Write-Host ("Personal-language cases : {0}/{1} ({2}%)" -f $evalCount, $evalTarget, $evalPct) -ForegroundColor White
+Write-Host ""
 Write-Host "--------------------------------------------------------------" -ForegroundColor DarkGray
 Write-Host "M1 ACCEPTANCE PATH" -ForegroundColor Cyan
 Write-Host "[DONE] Natural language -> ContextPack" -ForegroundColor Green
 Write-Host "[DONE] ContextPack -> IntentContract -> grounding/policy" -ForegroundColor Green
-Write-Host "[TODO] Local pytest evidence for canonical entrypoint" -ForegroundColor Yellow
+Write-Host "[DONE] Preserve preferences, hard constraints and evidence refs" -ForegroundColor Green
+Write-Host "[TODO] Local pytest evidence for latest canonical entrypoint" -ForegroundColor Yellow
 Write-Host "[TODO] Real cloud-model acceptance cases" -ForegroundColor Yellow
-Write-Host "[TODO] Expand personal-language eval set toward 50 cases" -ForegroundColor Yellow
+Write-Host ("[TODO] Expand personal-language eval set to 50 cases ({0}/{1})" -f $evalCount, $evalTarget) -ForegroundColor Yellow
 Write-Host ""
 Write-Host "CURRENT TARGET" -ForegroundColor Cyan
-Write-Host "M1 - prove canonical understanding entrypoint with local tests" -ForegroundColor White
+Write-Host "M1 - make short natural-language references reliable and regression-tested" -ForegroundColor White
 Write-Host ""
 Write-Host "NEXT USER-VISIBLE MILESTONE" -ForegroundColor Cyan
-Write-Host 'Short references such as CONTINUE / THIS / PREVIOUS VERSION resolve from context reliably' -ForegroundColor White
+Write-Host 'CONTINUE / THIS / PREVIOUS VERSION / ONLY CHANGE THIS preserve context and constraints' -ForegroundColor White
 Write-Host "--------------------------------------------------------------" -ForegroundColor DarkGray
 Write-Host ""
 
