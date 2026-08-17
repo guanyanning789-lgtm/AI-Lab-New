@@ -42,7 +42,7 @@ while ($true) {
     $currentHead = (git rev-parse HEAD 2>$null).Trim()
     $headChanged = $currentHead -and $currentHead -ne $lastHead
 
-    if ($RunTestsOnUpdate -and $headChanged -and $lastHead) {
+    if ($RunTestsOnUpdate -and $headChanged) {
         & "$repoRoot\status.ps1" -RunTests
     } else {
         & "$repoRoot\status.ps1"
