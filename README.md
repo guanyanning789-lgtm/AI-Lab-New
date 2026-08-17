@@ -72,6 +72,22 @@ Assurance（權限、驗證、Repair、Rollback）
 
 尚未接入真實模型或工具。先證明系統能正確描述「你到底要什麼」，再允許它操作電腦。
 
+## 查看開發完成度
+
+Windows PowerShell：
+
+```powershell
+.\status.ps1
+```
+
+同時執行測試並查看進度：
+
+```powershell
+.\status.ps1 -RunTests
+```
+
+進度百分比只在里程碑通過驗收並有證據後增加，不按文件數、提交數或代碼行數計算。
+
 ## 本地驗證
 
 ```bash
