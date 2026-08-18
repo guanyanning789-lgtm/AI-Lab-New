@@ -16,3 +16,25 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e ".[dev]"
       - run: pytest -q
+      - name: Run command-level acceptance loop
+        shell: bash
+        run: |
+          mkdir -p workspace
+          printf 'BEFORE' > workspace/acceptance.txt
+          python -m ai_lab "把工作區的 acceptance.txt 內容改成 DONE。" | tee acceptance-output.txt
+          test "$(cat workspace/acceptance.txt)" = "DONE"
+          grep -q "FINAL RESULT: PASS" acceptance-output.txt
+          grep -q "④ INDEPENDENT VERIFICATION .. YES" acceptance-output.txt
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          receipts = sorted(Path('.ai-lab/runs').glob('*/receipt.json'))
+          assert receipts, 'receipt.json was not created'
+          data = json.loads(receipts[-1].read_text(encoding='utf-8'))
+          assert data['final_status'] == 'verified_complete'
+          assert data['changed'] is True
+          assert data['verified'] is True
+          assert data['task']['relative_path'] == 'acceptance.txt'
+          assert data['task']['text'] == 'DONE'
+          PY

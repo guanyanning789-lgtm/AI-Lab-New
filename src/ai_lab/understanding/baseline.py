@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -29,12 +30,14 @@ def context_from_eval(*, session_id: str, utterance: str, raw: Mapping[str, Any]
     )
 
 
-class BaselineInterpreter:
-    """Deterministic M1 baseline for measuring context resolution before LLM integration.
+_FILE_WRITE_PATTERN = re.compile(
+    r"(?:把|將)(?:工作區(?:的)?\s*)?([\w.\-/]+)\s*(?:內容)?(?:改成|修改為|設為)\s*[\"'「『]?(.+?)[\"'」』]?\s*[。.!！]?$",
+    re.IGNORECASE,
+)
 
-    This is intentionally small and transparent. It is not the target intelligence layer;
-    it gives us a scoreable floor and prevents future model changes from regressing obvious cases.
-    """
+
+class BaselineInterpreter:
+    """Deterministic baseline that makes obvious personal requests scoreable."""
 
     def interpret(self, *, context: ContextPack) -> IntentContract:
         text = context.utterance.strip()
@@ -47,8 +50,20 @@ class BaselineInterpreter:
         inferred = "resolve the user's current request from available context"
         outcome = "produce the requested result"
         autonomy = AutonomyMode.ADVISE
+        verification_method = "scenario_specific_check"
 
-        if (text == "繼續" or text.startswith("繼續") or text.startswith("你繼續")) and context.active_goal_id:
+        file_write = _FILE_WRITE_PATTERN.search(text)
+        if file_write:
+            file_name = file_write.group(1).strip()
+            desired_text = file_write.group(2).strip()
+            goal = "modify_text_file"
+            target = (file_name,)
+            confidence = 0.98
+            inferred = "modify the requested text file inside the configured workspace"
+            outcome = desired_text
+            autonomy = AutonomyMode.EXECUTE
+            verification_method = "read_back_exact_match"
+        elif (text == "繼續" or text.startswith("繼續") or text.startswith("你繼續")) and context.active_goal_id:
             goal = "resume_active_goal"
             target = (context.active_goal_id,)
             confidence = 0.97
@@ -79,7 +94,11 @@ class BaselineInterpreter:
             inferred = "repair the failing tests in the active repository and verify before reporting success"
             outcome = "all targeted failed tests pass with verification evidence"
             autonomy = AutonomyMode.EXECUTE
-        elif ("修好這個項目" in text or "修這個項目" in text) and "active_repository=None" in state:
+        elif (
+            "修好這個項目" in text
+            or "修這個項目" in text
+            or "把這個項目修好" in text
+        ) and "active_repository=None" in state:
             goal = "repair_project"
             confidence = 0.84
             inferred = "repair a project, but the repository identity is unresolved"
@@ -119,7 +138,7 @@ class BaselineInterpreter:
                 SuccessCriterion(
                     id="expected-outcome",
                     description=outcome,
-                    verification_method="scenario_specific_check",
+                    verification_method=verification_method,
                 ),
             ),
             missing_information=missing,
