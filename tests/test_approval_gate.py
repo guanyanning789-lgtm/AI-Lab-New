@@ -3,6 +3,18 @@ from pathlib import Path
 import pytest
 
 from ai_lab.runtime.approval import execute_approved, prepare_execution
+from ai_lab.understanding.entrypoint import understand_utterance
+
+
+def test_baseline_recognizes_workspace_prefixed_file_write() -> None:
+    result = understand_utterance(
+        session_id="approval-regression",
+        utterance="把 workspace/demo.txt 改成 hello",
+    )
+
+    assert result.contract.primary_goal == "modify_text_file"
+    assert result.contract.target_scope == ("demo.txt",)
+    assert result.contract.desired_outcome == "hello"
 
 
 def test_prepare_execution_has_no_side_effect(tmp_path: Path) -> None:
