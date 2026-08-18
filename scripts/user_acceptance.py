@@ -4,7 +4,11 @@ import json
 import os
 from pathlib import Path
 
+from ai_lab.understanding.corrections import CorrectionRecorder
 from ai_lab.understanding.entrypoint import understand_utterance
+
+
+CORRECTION_PATH = Path("evals/correction_candidates.jsonl")
 
 
 def _load_context() -> dict[str, object]:
@@ -23,6 +27,7 @@ def main() -> None:
     print("直接用你平常的說法。輸入 /quit 結束。\n")
 
     raw_context = _load_context()
+    recorder = CorrectionRecorder(CORRECTION_PATH)
     use_llm = bool(os.getenv("OPENAI_API_KEY"))
     print("理解引擎：" + ("LLM structured interpreter" if use_llm else "baseline（未設 OPENAI_API_KEY）"))
     print("流程：Context -> IntentContract -> Grounding Validator -> Clarification Policy\n")
@@ -66,6 +71,20 @@ def main() -> None:
             label = input("評分 > ").strip().lower()
             if label in {"y", "m", "n"}:
                 break
+
+        if label in {"m", "n"}:
+            correction = input("請用一句話告訴我正確理解 > ").strip()
+            if correction:
+                recorder.record(
+                    utterance=utterance,
+                    raw_context=raw_context,
+                    predicted_goal=contract.primary_goal,
+                    predicted_outcome=contract.desired_outcome,
+                    rating=label,
+                    correction=correction,
+                )
+                print(f"已記錄 correction candidate：{CORRECTION_PATH}")
+
         score = _score(label)
         total += score
         count += 1
