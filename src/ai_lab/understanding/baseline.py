@@ -31,7 +31,7 @@ def context_from_eval(*, session_id: str, utterance: str, raw: Mapping[str, Any]
 
 
 _FILE_WRITE_PATTERN = re.compile(
-    r"(?:把|將)(?:工作區(?:的)?\s*)?([\w.\-/]+)\s*(?:內容)?(?:改成|修改為|設為)\s*[\"'「『]?(.+?)[\"'」』]?\s*[。.!！]?$",
+    r"(?:把|將)(?:工作區(?:的)?\s*|workspace[\\/]?)?([\w.\-/]+)\s*(?:內容)?(?:改成|修改為|設為)\s*[\"'「『]?(.+?)[\"'」』]?\s*[。.!！]?$",
     re.IGNORECASE,
 )
 
