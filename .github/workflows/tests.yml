@@ -16,15 +16,16 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e ".[dev]"
       - run: pytest -q
-      - name: Run command-level acceptance loop
+      - name: Run approval-gated command acceptance loop
         shell: bash
         run: |
           mkdir -p workspace
           printf 'BEFORE' > workspace/acceptance.txt
-          python -m ai_lab "把工作區的 acceptance.txt 內容改成 DONE。" | tee acceptance-output.txt
+          python -m ai_lab "把工作區的 acceptance.txt 內容改成 DONE。" --approve | tee acceptance-output.txt
           test "$(cat workspace/acceptance.txt)" = "DONE"
-          grep -q "FINAL RESULT: PASS" acceptance-output.txt
-          grep -q "④ INDEPENDENT VERIFICATION .. YES" acceptance-output.txt
+          grep -q "AI Lab 執行計劃" acceptance-output.txt
+          grep -q "獨立驗證：PASS" acceptance-output.txt
+          grep -q "最終狀態：verified_complete" acceptance-output.txt
           python - <<'PY'
           import json
           from pathlib import Path
