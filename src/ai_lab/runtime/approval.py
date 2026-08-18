@@ -8,10 +8,11 @@ from ai_lab.understanding.entrypoint import understand_utterance
 from ai_lab.understanding.models import UnderstandingResult
 
 from .acceptance import _save_receipt
-from .task import CompletionReceipt, TaskSpec
+from .task import CompletionReceipt, TaskAction, TaskSpec, VerificationSpec
 from .task_compiler import compile_task
 from .verifier import IndependentVerifier
 from .vertical_slice import SafeTextFileExecutor, assert_proceedable
+from .windows_task import execute_open_youtube
 
 
 @dataclass(frozen=True)
@@ -28,7 +29,13 @@ class ExecutionPlan:
 class PreparedExecution:
     plan: ExecutionPlan
     understanding: UnderstandingResult
-    task: TaskSpec
+    task: TaskSpec | None
+    action_kind: str = "text_file"
+
+
+def _is_youtube_request(text: str) -> bool:
+    lowered = text.lower()
+    return "youtube" in lowered and any(word in text for word in ("打開", "打开", "開啟", "开启"))
 
 
 def prepare_execution(*, utterance: str) -> PreparedExecution:
@@ -37,6 +44,28 @@ def prepare_execution(*, utterance: str) -> PreparedExecution:
         session_id=f"approval-{uuid4().hex[:8]}",
         utterance=utterance,
     )
+
+    if _is_youtube_request(utterance):
+        plan = ExecutionPlan(
+            plan_id=uuid4().hex,
+            utterance=utterance,
+            steps=(
+                "確認本次任務只需要打開 YouTube，不進行其他操作",
+                "使用 Windows 預設瀏覽器打開 YouTube 網頁版",
+                "檢查瀏覽器程序是否成功啟動",
+                "回報執行與驗證結果",
+            ),
+            executor="Windows Agent",
+            risk="low",
+            target="https://www.youtube.com/",
+        )
+        return PreparedExecution(
+            plan=plan,
+            understanding=understanding,
+            task=None,
+            action_kind="open_youtube",
+        )
+
     assert_proceedable(understanding.decision.action)
     task = compile_task(understanding.contract)
     plan = ExecutionPlan(
@@ -61,6 +90,30 @@ def execute_approved(*, prepared: PreparedExecution, approved_plan_id: str, root
     if approved_plan_id != prepared.plan.plan_id:
         raise PermissionError("execution blocked: plan has not been explicitly approved")
 
+    if prepared.action_kind == "open_youtube":
+        result = execute_open_youtube()
+        synthetic_task = TaskSpec(
+            action=TaskAction.WRITE_TEXT,
+            relative_path="windows://open-youtube",
+            text=result.target,
+            verification=VerificationSpec(method="browser_process_check", expected_text="browser running"),
+        )
+        return CompletionReceipt(
+            utterance=prepared.plan.utterance,
+            task=synthetic_task,
+            policy_action="approved_windows_action",
+            changed=result.changed,
+            target=result.target,
+            before_text=None,
+            after_text=result.detail,
+            before_hash=None,
+            after_hash="windows-action",
+            verified=result.verified,
+            final_status="verified_complete" if result.verified else "verification_failed",
+        )
+
+    if prepared.task is None:
+        raise RuntimeError("prepared task is missing")
     workspace = (root / "workspace").resolve()
     execution = SafeTextFileExecutor(workspace).execute(
         contract=prepared.understanding.contract,
