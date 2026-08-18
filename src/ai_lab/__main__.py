@@ -33,7 +33,16 @@ def main() -> int:
         print("沒有收到任務。")
         return 2
 
-    prepared = prepare_execution(utterance=utterance)
+    try:
+        prepared = prepare_execution(utterance=utterance)
+    except ValueError as exc:
+        if "unsupported goal for vertical slice" in str(exc):
+            print("\nAI Lab 目前還不能為這個任務生成可執行計劃。")
+            print("沒有執行任何修改。")
+            print("目前這個里程碑只支援：自然語言修改 workspace 內的文字文件。")
+            return 3
+        raise
+
     _print_plan(prepared)
 
     approved = args.approve
