@@ -7,6 +7,7 @@ from uuid import uuid4
 from ai_lab.understanding.entrypoint import understand_utterance
 from ai_lab.understanding.models import UnderstandingResult
 
+from .acceptance import _save_receipt
 from .task import CompletionReceipt, TaskSpec
 from .task_compiler import compile_task
 from .verifier import IndependentVerifier
@@ -69,7 +70,7 @@ def execute_approved(*, prepared: PreparedExecution, approved_plan_id: str, root
         task=prepared.task,
         before_hash=execution.before_hash,
     )
-    return CompletionReceipt(
+    receipt = CompletionReceipt(
         utterance=prepared.plan.utterance,
         task=prepared.task,
         policy_action=prepared.understanding.decision.action.value,
@@ -82,3 +83,5 @@ def execute_approved(*, prepared: PreparedExecution, approved_plan_id: str, root
         verified=verification.verified,
         final_status="verified_complete" if verification.verified else "verification_failed",
     )
+    _save_receipt(root=root, receipt=receipt)
+    return receipt
