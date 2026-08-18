@@ -14,7 +14,7 @@ from .verifier import IndependentVerifier
 from .vertical_slice import SafeTextFileExecutor, assert_proceedable
 
 
-def run_vertical_acceptance(*, utterance: str, root: Path) -> CompletionReceipt:
+def run_vertical_acceptance(*, utterance: str, root: Path) -> tuple[CompletionReceipt, Path]:
     understanding = understand_utterance(
         session_id=f"acceptance-{uuid4().hex[:8]}",
         utterance=utterance,
@@ -45,8 +45,8 @@ def run_vertical_acceptance(*, utterance: str, root: Path) -> CompletionReceipt:
         verified=verification.verified,
         final_status="verified_complete" if verification.verified else "verification_failed",
     )
-    _save_receipt(root=root, receipt=receipt)
-    return receipt
+    receipt_path = _save_receipt(root=root, receipt=receipt)
+    return receipt, receipt_path
 
 
 def _save_receipt(*, root: Path, receipt: CompletionReceipt) -> Path:
