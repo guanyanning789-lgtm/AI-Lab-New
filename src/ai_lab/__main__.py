@@ -7,17 +7,27 @@ from .runtime.acceptance import run_vertical_acceptance
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="AI Lab OS vertical acceptance runner")
-    parser.add_argument("utterance", help="one natural-language request")
+    parser = argparse.ArgumentParser(description="AI Lab OS")
+    parser.add_argument("utterance", nargs="?", help="one natural-language request")
+    parser.add_argument("--dialog", action="store_true", help="open the desktop preview/approval dialog")
     args = parser.parse_args()
+
+    if args.dialog:
+        from .dialog import launch_dialog
+
+        launch_dialog(Path.cwd())
+        return 0
+
+    if not args.utterance:
+        parser.error("provide an utterance or use --dialog")
 
     receipt, receipt_path = run_vertical_acceptance(
         utterance=args.utterance,
         root=Path.cwd(),
     )
 
-    print(f"① ONE HUMAN SENTENCE ........ YES")
-    print(f"② TASK CREATED .............. YES")
+    print("① ONE HUMAN SENTENCE ........ YES")
+    print("② TASK CREATED .............. YES")
     print(f"   action: {receipt.task.action.value}")
     print(f"   target: workspace/{receipt.task.relative_path}")
     print(f"   desired content: {receipt.task.text}")
