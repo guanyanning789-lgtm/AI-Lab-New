@@ -94,7 +94,11 @@ class BaselineInterpreter:
             inferred = "repair the failing tests in the active repository and verify before reporting success"
             outcome = "all targeted failed tests pass with verification evidence"
             autonomy = AutonomyMode.EXECUTE
-        elif ("修好這個項目" in text or "修這個項目" in text) and "active_repository=None" in state:
+        elif (
+            "修好這個項目" in text
+            or "修這個項目" in text
+            or "把這個項目修好" in text
+        ) and "active_repository=None" in state:
             goal = "repair_project"
             confidence = 0.84
             inferred = "repair a project, but the repository identity is unresolved"
